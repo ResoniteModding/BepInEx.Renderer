@@ -19,8 +19,8 @@ outdir = "./build"
 
 # Copy the compiled DLL to the plugins folder in the mod package
 [[build.copy]]
-source = "./dist/BepInEx"
-target = "/BepInExPack/Renderer/"
+source = "./dist/BepInEx/BepInEx"
+target = "/BepInExPack/Renderer/BepInEx"
 
 # Uncomment the following lines to include CHANGELOG file in your mod package. https://wiki.thunderstore.io/mods/updating-a-package#changelog
 # [[build.copy]]
