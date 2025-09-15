@@ -29,10 +29,12 @@ jobs:
                     SHA_SHORT=$(git rev-parse --short HEAD)
                     echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
                     
-                    # Extract version from build.cake (convert 4-part to 3-part like 5.4.233)
+                    # Extract version components from build.cake
                     BEPINEX_VERSION=$(grep 'var bepInExVersion' build.cake | sed -n 's/.*"\([^"]*\)".*/\1/p')
-                    # Convert 5.4.23.3 to 5.4.233 format
-                    VERSION=$(echo "$BEPINEX_VERSION" | awk -F. '{print $1"."$2"."$3$4}')
+                    PATCH_NUMBER=$(grep 'var packagePatchNumber' build.cake | sed -n 's/.*"\([^"]*\)".*/\1/p')
+                    
+                    # Convert to package version format (e.g., 5.4.23.3 + 001 -> 5.4.233001)
+                    VERSION=$(echo "$BEPINEX_VERSION" | awk -F. -v patch="$PATCH_NUMBER" '{print $1"."$2"."$3$4 patch}')
                     echo "version=$VERSION" >> $GITHUB_OUTPUT
                     echo "Version found: $VERSION"
             -   uses: actions/setup-dotnet@v4

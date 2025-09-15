@@ -10,19 +10,6 @@ jobs:
             -   uses: actions/checkout@v3
                 with:
                     fetch-depth: 0 # Need to fetch all for proper history
-            -   name: Collect build info
-                id: info
-                run: |
-                    # Get short SHA
-                    SHA_SHORT=$(git rev-parse --short HEAD)
-                    echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
-                    
-                    # Extract version from build.cake (convert 4-part to 3-part like 5.4.233)
-                    BEPINEX_VERSION=$(grep 'var bepInExVersion' build.cake | sed -n 's/.*"\([^"]*\)".*/\1/p')
-                    # Convert 5.4.23.3 to 5.4.233 format
-                    VERSION=$(echo "$BEPINEX_VERSION" | awk -F. '{print $1"."$2"."$3$4}')
-                    echo "version=$VERSION" >> $GITHUB_OUTPUT
-                    echo "Version found: $VERSION"
             -   uses: actions/setup-dotnet@v4
                 with:
                     dotnet-version: "9.0.x"
