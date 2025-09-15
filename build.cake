@@ -1,8 +1,10 @@
 // Version constants
 var bepInExVersion = "5.4.23.3";
-// Convert 4-part version to 3-part by combining last two parts (Major.Minor.PatchBuild)
+var packagePatchNumber = "001"; // Reserved patch number for package updates (000-999)
+
+// Convert to 3-part version with 3-digit patch suffix (Major.Minor.Patch###)
 var versionParts = bepInExVersion.Split('.');
-var packageVersion = $"{versionParts[0]}.{versionParts[1]}.{versionParts[2]}{versionParts[3]}";
+var packageVersion = $"{versionParts[0]}.{versionParts[1]}.{versionParts[2]}{versionParts[3]}{packagePatchNumber}";
 
 // Build configuration
 var target = Argument("target", "Default");
