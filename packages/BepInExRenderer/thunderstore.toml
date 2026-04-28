@@ -1,0 +1,27 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "ResoniteModding"
+name = "BepInExRenderer"
+description = "BepInEx 5 (Mono) for Resonite's Unity renderer. Dependency for renderer mods."
+websiteUrl = "https://github.com/ResoniteModding/BepInEx.Renderer"
+containsNsfwContent = false
+
+[package.dependencies]
+
+[build]
+icon = "../../icon.png"
+readme = "../../README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./dist/BepInEx/BepInEx"
+target = "/BepInExPack/Renderer/BepInEx"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["resonite"]
+
+[publish.categories]
+resonite = ["libraries"]
