@@ -3,72 +3,86 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       create_release:
-        description: 'Create a GitHub release'
+        description: "Create GitHub releases"
         required: false
-        default: 'true'
+        default: "true"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
 
 jobs:
-    release:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: actions/checkout@v3
-                with:
-                    fetch-depth: 0 # Need to fetch all for proper history
-            -   name: Collect build info
-                id: info
-                run: |
-                    # Get short SHA
-                    SHA_SHORT=$(git rev-parse --short HEAD)
-                    echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
-                    
-                    # Extract version components from build.cake
-                    BEPINEX_VERSION=$(grep 'var bepInExVersion' build.cake | sed -n 's/.*"\([^"]*\)".*/\1/p')
-                    PATCH_NUMBER=$(grep 'var packagePatchNumber' build.cake | sed -n 's/.*"\([^"]*\)".*/\1/p')
-                    
-                    # Convert to package version format (e.g., 5.4.23.3 + 001 -> 5.4.233001)
-                    VERSION=$(echo "$BEPINEX_VERSION" | awk -F. -v patch="$PATCH_NUMBER" '{print $1"."$2"."$3$4 patch}')
-                    echo "version=$VERSION" >> $GITHUB_OUTPUT
-                    echo "Version found: $VERSION"
-            -   uses: actions/setup-dotnet@v4
-                with:
-                    dotnet-version: "9.0.x"
-            -   name: Build and Create Thunderstore Package
-                run: |
-                    dotnet tool restore
-                    dotnet cake
-            -   name: Create Git Tag (if needed)
-                if: ${{ github.event_name == 'workflow_dispatch' }}
-                run: |
-                    TAG_NAME="v${{ steps.info.outputs.version }}"
-                    # Check if tag already exists
-                    if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-                        echo "Tag $TAG_NAME already exists"
-                    else
-                        echo "Creating tag $TAG_NAME"
-                        git config user.name github-actions
-                        git config user.email github-actions@github.com
-                        git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-                        git push origin "$TAG_NAME"
-                    fi
-            -   name: Create GitHub Release
-                if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true') }}
-                uses: softprops/action-gh-release@v2
-                with:
-                    draft: true
-                    prerelease: false
-                    generate_release_notes: false
-                    name: ${{ steps.info.outputs.version }}
-                    tag_name: v${{ steps.info.outputs.version }}
-                    target_commitish: ${{ github.sha }}
-                    files: |
-                        ./build/*.zip
-                env:
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - name: BepInExRenderer
+            display: Mono
+            target: BuildBepInExRenderer
+            prerelease: false
+            version_regex: "Mono: BepInEx \\K[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+"
+          - name: BepInExRenderer.IL2CPP
+            display: IL2CPP
+            target: BuildBepInExRenderer.IL2CPP
+            prerelease: true
+            version_regex: "IL2CPP: build \\d+ \\([a-f0-9]+\\) .*
+              v\\K[0-9]+\\.[0-9]+\\.[0-9]+"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          global-json-file: global.json
+      - name: Build ${{ matrix.package.display }}
+        id: build
+        run: |
+          dotnet tool restore
+          dotnet cake --target=${{ matrix.package.target }} 2>&1 | tee build.log
+          VERSION=$(grep -oP '${{ matrix.package.version_regex }}' build.log | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: Could not extract ${{ matrix.package.display }} version from build log" >&2
+            cat build.log
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "${{ matrix.package.display }} version: $VERSION"
+      - name: Create Git Tag (if needed)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          TAG_NAME="v${STEPS_BUILD_OUTPUTS_VERSION}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists"
+          else
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
+        env:
+          STEPS_BUILD_OUTPUTS_VERSION: ${{ steps.build.outputs.version }}
+      - name: Create GitHub Release (${{ matrix.package.display }})
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+          (github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.create_release == 'true') }}
+        run: |
+          TAG="v${STEPS_BUILD_OUTPUTS_VERSION}"
+          ZIPS="./packages/${{ matrix.package.name }}/build/*.zip"
+          gh release create "$TAG" --draft --title "${STEPS_BUILD_OUTPUTS_VERSION}" \
+            $([ "${{ matrix.package.prerelease }}" = "true" ] && echo "--prerelease") \
+            --target "${{ github.sha }}" \
+            --generate-notes \
+            $ZIPS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STEPS_BUILD_OUTPUTS_VERSION: ${{ steps.build.outputs.version }}

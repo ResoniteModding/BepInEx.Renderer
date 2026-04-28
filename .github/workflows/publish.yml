@@ -1,25 +1,40 @@
 name: Publish to Thunderstore
 
 on:
+  schedule:
+    - cron: "0 4 * * 0"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-    release:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: actions/checkout@v3
-                with:
-                    fetch-depth: 0 # Need to fetch all for proper history
-            -   uses: actions/setup-dotnet@v4
-                with:
-                    dotnet-version: "9.0.x"
-            -   name: Build and Create Thunderstore Package
-                run: |
-                    dotnet tool restore
-                    dotnet cake
-            -   name: Publish to Thunderstore
-                run: |
-                    ZIP_FILE=$(ls ./build/*.zip | head -1)
-                    dotnet tcli publish --file "$ZIP_FILE"
-                env:
-                    TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - name: BepInExRenderer
+            display: Mono
+            target: BuildBepInExRenderer
+          - name: BepInExRenderer.IL2CPP
+            display: IL2CPP
+            target: BuildBepInExRenderer.IL2CPP
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        with:
+          global-json-file: global.json
+      - name: Build ${{ matrix.package.display }}
+        run: |
+          dotnet tool restore
+          dotnet cake --target=${{ matrix.package.target }}
+      - name: Publish ${{ matrix.package.display }} to Thunderstore
+        run: |
+          ZIP_FILE=$(ls ./packages/${{ matrix.package.name }}/build/*.zip | head -1)
+          dotnet tcli publish --file "$ZIP_FILE"
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
