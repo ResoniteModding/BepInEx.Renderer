@@ -3,8 +3,8 @@ schemaVersion = "0.0.1"
 
 [package]
 namespace = "ResoniteModding"
-name = "BepInExRenderer.IL2CPP"
-description = "BepInEx 6 Bleeding Edge (IL2CPP) for Resonite. Dependency for IL2CPP renderer mods."
+name = "BepInExRenderer"
+description = "BepInEx 6 Bleeding Edge (IL2CPP) for Resonite. Dependency for renderer mods."
 websiteUrl = "https://github.com/ResoniteModding/BepInEx.Renderer"
 containsNsfwContent = false
 

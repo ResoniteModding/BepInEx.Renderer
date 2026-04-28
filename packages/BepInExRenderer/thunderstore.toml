@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "ResoniteModding"
 name = "BepInExRenderer"
-description = "BepInEx for Resonite's Unity renderer. Dependency for renderer mods."
+description = "BepInEx 5 (Mono) for Resonite's Unity renderer. Dependency for renderer mods."
 websiteUrl = "https://github.com/ResoniteModding/BepInEx.Renderer"
 containsNsfwContent = false
 
@@ -24,6 +24,4 @@ repository = "https://thunderstore.io"
 communities = ["resonite"]
 
 [publish.categories]
-resonite = [
-  "libraries",
-]
+resonite = ["libraries"]
